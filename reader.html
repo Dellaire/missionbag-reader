@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+
+        table, tr, th, td {
+            border-collapse: collapse;
+            border: 1px solid;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<input type="file" onchange="readMissionBag(this)">
+
+<table id="playerInfo"></table>
+
+<script type="text/javascript">
+
+            const valuesToExtract = [
+                ["Name", "blood_line_name", null],
+                ["MMR", "mmr", null],
+                ["Downed by me", "downedbyme", "green"],
+                ["Downed by teammate", "downedbyteammate", "green"],
+                ["Downed me", "downedme", "red"],
+                ["Downed teammate", "downedteammate", "red"],
+            ];
+
+            function readMissionBag(input) {
+
+                prepareTable();
+
+                var fileReader = new FileReader();
+                fileReader.readAsText(input.files[0]);
+                fileReader.onload = function() {
+                    readPlayerChunks(fileReader.result);
+                };
+            }
+
+            function readPlayerChunks(missionBag) {
+
+                var playerChunks = missionBag.split(/\<.+MissionBagPlayer.+tooltipkilledteammate.+\>/);
+                playerChunks.pop();
+                playerChunks.shift();
+
+                playerChunks.forEach(playerChunk => {
+                        var playerDetails = readPlayerChunk(playerChunk);
+                        fillTable(playerDetails);
+                        console.log(playerDetails);
+                    }
+                );
+            }
+
+            function readPlayerChunk(playerChunk) {
+
+                var playerDetails = new Map();
+                valuesToExtract.forEach(value => {
+                        playerDetails.set(value[0], extractValue(playerChunk, value[1]));
+                    }
+                );
+
+                return playerDetails;
+            }
+
+            function extractValue(playerChunk, valueName) {
+
+                var valueRegex = new RegExp(valueName + '.+value=\"');
+                var startIndex = playerChunk.search(valueRegex) + valueRegex.toString().length - 2;
+                playerChunk = playerChunk.slice(startIndex);
+                var endIndex = playerChunk.search('\"');
+
+                return playerChunk.slice(0, endIndex);
+            }
+
+            function prepareTable() {
+
+                var tableHeader = '<tr>';
+                valuesToExtract.forEach(value => {
+                        tableHeader += '<th>' + value[0] + '</th>';
+                    }
+                );
+                tableHeader += '</tr>';
+
+                document.getElementById('playerInfo').innerHTML = tableHeader;
+            }
+
+            function fillTable(playerDetails) {
+
+                var newPlayerData = '<tr>';
+                valuesToExtract.forEach(value => {
+
+                        var specialColorStyle = '';
+                        if (playerDetails.get(value[0]) > 0 && value[2] != null) {
+                            specialColorStyle = ' bgcolor="' + value[2] + '"';
+                        }
+                        newPlayerData += '<td' + specialColorStyle + '>' + playerDetails.get(value[0]) + '</td>';
+                    }
+                );
+                newPlayerData += '</tr>';
+
+                var existingPlayerData = document.getElementById('playerInfo').innerHTML;
+                document.getElementById('playerInfo').innerHTML = existingPlayerData + newPlayerData;
+            }
+
+
+</script>
+
+</body>
+</html>
